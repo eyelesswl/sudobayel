@@ -1,5 +1,7 @@
-import { ApiError, db, generateCode, hashToken, newToken, parseName, readJson, route } from "@/lib/server";
-
+import {
+  ApiError, authenticate, buildState, db, getRoom, hashToken, newToken, parseCode, parseName,
+  parseSlot, parseTeamName, readJson, route, tryAuthenticate,
+} from "@/lib/server";
 export const dynamic = "force-dynamic";
 
 /** Создание комнаты: создатель становится администратором. */
