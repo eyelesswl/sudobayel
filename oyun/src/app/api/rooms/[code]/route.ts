@@ -41,7 +41,9 @@ export const POST = route<P>(async (req, { params }) => {
 
   if (action === "team") {
     const slot = body.slot === null ? null : parseSlot(body.slot);
-    if (room.status === "active" && me.team_slot !== null) throw new ApiError("team_locked", 409);
+  if (room.status === "active" && me.team_slot !== null) {
+  throw new ApiError("team_locked", 409);
+}
     ok(await db().from("players").update({ team_slot: slot }).eq("id", me.id));
   } else if (action === "press") {
     if (me.team_slot === null) throw new ApiError("no_team", 409);
