@@ -144,3 +144,6 @@ export async function buildState(code: string, meId: string | null): Promise<Roo
     me: me ? { id: me.id, isAdmin: me.isAdmin, teamSlot: me.teamSlot } : null,
   };
 }
+export function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
