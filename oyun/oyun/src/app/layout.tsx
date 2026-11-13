@@ -5,9 +5,19 @@ import { I18nProvider, LangSwitch } from "@/lib/i18n";
 import "./globals.css";
 
 // Noto поддерживает кириллицу и кыргызские буквы ө, ү, ң.
-const subsets: ("latin" | "cyrillic" | "cyrillic-ext")[] = ["latin", "cyrillic", "cyrillic-ext"];
-const display = Noto_Serif({ subsets, weight: ["600", "800"], variable: "--font-display", display: "swap" });
-const body = Noto_Sans({ subsets, weight: ["400", "500", "600", "700"], variable: "--font-body", display: "swap" });
+const display = Noto_Serif({
+  subsets: ["latin", "cyrillic", "cyrillic-ext"],
+  weight: ["600", "800"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const body = Noto_Sans({
+  subsets: ["latin", "cyrillic", "cyrillic-ext"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-body",
+  display: "swap",
+});
 
 export const metadata: Metadata = { title: "ОЮН", description: "Командная игра на скорость нажатия кнопки" };
 export const viewport: Viewport = { themeColor: "#0e0a0a", width: "device-width", initialScale: 1 };
