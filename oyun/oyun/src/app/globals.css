@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { background: #0e0a0a; color: #f3e9d2; font-family: var(--font-body), system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+
+@layer components {
+  .card { @apply rounded-3xl border border-gold/25 bg-[#150b0e]/90 backdrop-blur; box-shadow: 0 20px 60px -30px #000; }
+  .btn { @apply inline-flex items-center justify-center rounded-2xl px-6 py-3.5 text-base font-semibold text-cream transition active:scale-[.97] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70; }
+  .btn-primary { @apply btn; background: linear-gradient(180deg, #c42a33, #8f1620); box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 0 0 1px rgba(212,169,79,.5); }
+  .btn-primary:hover { filter: brightness(1.12); }
+  .btn-ghost { @apply btn border border-gold/40 bg-white/[0.03] hover:bg-gold/10; }
+  .btn-sm { @apply rounded-xl px-3 py-1.5 text-sm; }
+  .input { @apply w-full rounded-2xl border border-gold/25 bg-black/40 px-4 py-3.5 text-base text-cream outline-none transition placeholder:text-cream/30 focus:border-gold/70 focus:ring-2 focus:ring-gold/20; }
+  .chip { @apply inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-sm; }
+}
+
+/* ---- анимации */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { opacity: 0; transform: scale(.85); } 60% { transform: scale(1.04); } 100% { opacity: 1; transform: none; } }
+@keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes drift { to { transform: translate(80px, 80px); } }
+@keyframes glow { 0%, 100% { box-shadow: var(--ring), 0 0 40px -10px var(--team); } 50% { box-shadow: var(--ring), 0 0 90px 0 var(--team); } }
+@keyframes ripple { from { opacity: .8; transform: scale(1); } to { opacity: 0; transform: scale(1.18); } }
+@keyframes langSwap { from { opacity: .3; } to { opacity: 1; } }
+
+.fade-up { animation: fadeUp .5s ease both; }
+.pop { animation: pop .55s cubic-bezier(.2,.9,.3,1.2) both; }
+.draw { stroke-dasharray: 1; animation: draw 2.2s ease-out both; }
+.pattern-drift { animation: drift 90s linear infinite; }
+.lang-swap { animation: langSwap .3s ease; }
+
+/* ---- большая игровая кнопка */
+.big-btn {
+  --ring: 0 0 0 6px #0e0a0a, 0 0 0 8px color-mix(in srgb, var(--team) 55%, #d4a94f);
+  position: relative; width: min(70vw, 300px); aspect-ratio: 1; border-radius: 9999px; border: 0;
+  color: var(--on); font-family: var(--font-display), serif; font-weight: 800; font-size: clamp(1.8rem, 7vw, 2.5rem);
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--team) 65%, white), var(--team) 45%, color-mix(in srgb, var(--team) 65%, black));
+  box-shadow: var(--ring), 0 30px 70px -25px var(--team);
+  transition: transform .12s ease, filter .2s; touch-action: manipulation; user-select: none;
+}
+.big-btn:disabled { filter: saturate(.3) brightness(.55); cursor: not-allowed; }
+.big-btn.live { animation: glow 1.6s ease-in-out infinite; cursor: pointer; }
+.big-btn.live:active { transform: scale(.93); }
+.big-btn.live:active::after { content: ""; position: absolute; inset: -8px; border-radius: 9999px; border: 3px solid var(--team); animation: ripple .5s ease-out; }
+.big-btn::before { content: ""; position: absolute; inset: 14px; border-radius: 9999px; border: 2px dashed rgba(255,255,255,.3); pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
