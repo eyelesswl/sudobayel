@@ -1,6 +1,6 @@
 import {
   ApiError, authenticate, buildState, db, getRoom, hashToken, newToken, parseCode, parseName,
-  isUuid, parseSlot, parseTeamName, parseText, readJson, route, tryAuthenticate,
+  isUuid, parseAvatar, parseSlot, parseTeamName, parseText, readJson, route, tryAuthenticate,
 } from "@/lib/server";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export const POST = route<P>(async (req, { params }) => {
 
   if (action === "join") {
     const token = newToken();
-    const { data, error } = await db().rpc("join_room", { p_code: code, p_name: parseName(body.name), p_token_hash: hashToken(token) });
+    const { data, error } = await db().rpc("join_room", { p_code: code, p_name: parseName(body.name), p_token_hash: hashToken(token), p_avatar: parseAvatar(body.avatar) });
     if (error) {
       if (error.code === "23505") throw new ApiError("name_taken", 409);
       for (const k of ["room_not_found", "room_closed", "room_full"]) {
@@ -37,7 +37,7 @@ export const POST = route<P>(async (req, { params }) => {
   const me = await authenticate(req, room);
   if (room.status === "closed") throw new ApiError("room_closed", 409);
   const ok = (r: { error: unknown }) => { if (r.error) throw r.error; };
-  let won: boolean | undefined;
+  let result: string | undefined;
 
   if (action === "team") {
     const slot = body.slot === null ? null : parseSlot(body.slot);
@@ -45,10 +45,10 @@ export const POST = route<P>(async (req, { params }) => {
     ok(await db().from("players").update({ team_slot: slot }).eq("id", me.id));
   } else if (action === "press") {
     if (me.team_slot === null) throw new ApiError("no_team", 409);
-    // Атомарно в БД: победителем становится ровно один игрок на всю комнату.
+    // Атомарно в БД: победитель ровно один на всю комнату; нажатие до сигнала — фальстарт.
     const { data, error } = await db().rpc("press_button", { p_room: room.id, p_player: me.id });
     if (error) throw error;
-    won = data === true;
+    result = String(data); // won | late | false_start | locked | no_team
   } else {
     // ---- только администратор
     if (!me.is_admin) throw new ApiError("not_admin", 403);
@@ -57,7 +57,7 @@ export const POST = route<P>(async (req, { params }) => {
     } else if (action === "reset") {
       ok(await db().from("rooms").update({
         status: "idle", winner_player_id: null, winner_name: null, winner_team_slot: null,
-        winner_pressed_at: null, awarded: false, updated_at: new Date().toISOString(),
+        winner_pressed_at: null, go_at: null, updated_at: new Date().toISOString(),
       }).eq("id", room.id));
     } else if (action === "rename") {
       ok(await db().from("teams").update({ name: parseTeamName(body.name) }).eq("room_id", room.id).eq("slot", parseSlot(body.slot)));
@@ -67,8 +67,6 @@ export const POST = route<P>(async (req, { params }) => {
       if (!data) throw new ApiError("player_not_found", 404);
       if (data.is_admin) throw new ApiError("cannot_kick_admin", 400);
       ok(await db().from("players").delete().eq("id", id).eq("room_id", room.id));
-    } else if (action === "award") {
-      ok(await db().rpc("award_point", { p_room: room.id })); // атомарно, один раз за раунд
     } else if (action === "q_add") {
       const text = parseText(body.text, 200);
       const answer = typeof body.answer === "string" && body.answer.trim() ? parseText(body.answer, 100) : null;
@@ -88,5 +86,5 @@ export const POST = route<P>(async (req, { params }) => {
     }
   }
 
-  return { won, state: await buildState(code, me.id) };
+  return { result, state: await buildState(code, me.id) };
 });

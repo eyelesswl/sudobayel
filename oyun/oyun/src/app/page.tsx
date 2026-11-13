@@ -1,48 +1,15 @@
 "use client";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Avatar } from "@/components/Avatar";
 import { Band, Muyuz } from "@/components/Ornament";
-import { api, loadSession, saveSession } from "@/lib/client";
-import { errText, useI18n } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
+import { loadProfile, type Profile } from "@/lib/profile";
 
 export default function Home() {
   const { t } = useI18n();
-  const router = useRouter();
-  const [mode, setMode] = useState<null | "create" | "join">(null);
-  const [name, setName] = useState("");
-  const [code, setCode] = useState("");
-  const [err, setErr] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => { try { setName(localStorage.getItem("oyun:name") ?? ""); } catch { /* ignore */ } }, []);
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (busy) return;
-    setErr("");
-    const n = name.trim();
-    if (!n) return setErr(t("err.invalid_name"));
-    const c = code.trim().toUpperCase();
-    if (mode === "join" && !/^[A-Z0-9]{6}$/.test(c)) return setErr(t("err.invalid_code"));
-    setBusy(true);
-    try {
-      try { localStorage.setItem("oyun:name", n); } catch { /* ignore */ }
-      if (mode === "create") {
-        const r = await api.create(n);
-        saveSession(r.code, { playerId: r.playerId, token: r.token });
-        router.push(`/room/${r.code}`);
-      } else {
-        if (!loadSession(c)) {
-          const r = await api.join(c, n);
-          saveSession(c, { playerId: r.playerId, token: r.token });
-        }
-        router.push(`/room/${c}`);
-      }
-    } catch (e) {
-      setErr(errText(t, e));
-      setBusy(false);
-    }
-  }
+  const [p, setP] = useState<Profile | null>(null);
+  useEffect(() => setP(loadProfile()), []);
 
   return (
     <main className="relative flex min-h-dvh flex-col items-center justify-center px-5 pb-24 pt-20">
@@ -52,27 +19,20 @@ export default function Home() {
         <div className="my-4 w-40 opacity-90"><Band /></div>
         <p className="text-cream/70">{t("home.tagline")}</p>
 
-        {mode === null ? (
-          <div className="mt-10 flex w-full flex-col gap-3">
-            <button className="btn-primary" onClick={() => setMode("create")}>{t("home.create")}</button>
-            <button className="btn-ghost" onClick={() => setMode("join")}>{t("home.join")}</button>
+        {/* Профиль игрока: имя и фото подставляются при создании комнаты и входе */}
+        <Link href="/profile" className="card mt-8 flex w-full items-center gap-3 p-3 text-left transition hover:border-gold/60">
+          <Avatar name={p?.name || "?"} src={p?.avatar} size={48} />
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-semibold">{p?.name || t("profile.setup")}</div>
+            <div className="text-xs text-cream/50">{t("profile.edit")}</div>
           </div>
-        ) : (
-          <form onSubmit={submit} className="card fade-up mt-8 flex w-full flex-col gap-3 p-5 text-left">
-            {mode === "join" && (
-              <label className="text-sm text-cream/70">{t("field.code")}
-                <input className="input mt-1 text-center font-mono text-xl uppercase tracking-[.35em]" maxLength={6} autoFocus
-                  autoCapitalize="characters" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} />
-              </label>
-            )}
-            <label className="text-sm text-cream/70">{t("field.name")}
-              <input className="input mt-1" maxLength={24} autoFocus={mode === "create"} value={name} onChange={(e) => setName(e.target.value)} />
-            </label>
-            {err && <p role="alert" className="text-sm text-red-400">{err}</p>}
-            <button className="btn-primary mt-1" disabled={busy}>{mode === "create" ? t("form.create") : t("form.join")}</button>
-            <button type="button" className="btn-ghost btn-sm" onClick={() => { setMode(null); setErr(""); }}>{t("common.back")}</button>
-          </form>
-        )}
+          <span className="text-xl text-gold">›</span>
+        </Link>
+
+        <div className="mt-4 flex w-full flex-col gap-3">
+          <Link href="/create" className="btn-primary">{t("home.create")}</Link>
+          <Link href="/join" className="btn-ghost">{t("home.join")}</Link>
+        </div>
       </div>
 
       {/* Подпись автора — всегда в правом нижнем углу, на любом языке */}

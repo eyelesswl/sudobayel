@@ -48,3 +48,19 @@ export function playBell() {
   const t0 = ctx.currentTime;
   [[1318.5, 0], [1760, 0.13], [2093, 0.26], [1568, 0.42]].forEach(([f, d]) => bell(ctx!, f, t0 + d));
 }
+
+/** Короткий сигнал отсчёта; high=true — сигнал "СТАРТ". */
+export function playTick(high: boolean) {
+  if (muted || !ctx || ctx.state !== "running") return;
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  const t0 = ctx.currentTime;
+  osc.type = "sine";
+  osc.frequency.value = high ? 1320 : 660;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(0.18, t0 + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + (high ? 0.35 : 0.15));
+  osc.connect(g).connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + 0.4);
+}

@@ -64,6 +64,14 @@ export function parseText(raw: unknown, max: number): string {
   return n;
 }
 
+/** Фото профиля: JPEG data-URL (уменьшается в браузере до 128x128). Хранится только base64-часть. */
+export function parseAvatar(raw: unknown): string | null {
+  if (raw === undefined || raw === null || raw === "") return null;
+  const m = typeof raw === "string" ? /^data:image\/jpeg;base64,([A-Za-z0-9+/]+=*)$/.exec(raw) : null;
+  if (!m || m[1].length > 40000) throw new ApiError("invalid_request");
+  return m[1];
+}
+
 export function parseSlot(raw: unknown): number {
   if (typeof raw !== "number" || !Number.isInteger(raw) || raw < 0 || raw > 3) throw new ApiError("invalid_request");
   return raw;
@@ -93,7 +101,7 @@ export const hashToken = (t: string) => createHash("sha256").update(t).digest("h
 export interface RoomRow {
   id: string; code: string; status: RoomStatus; round_number: number;
   winner_player_id: string | null; winner_name: string | null; winner_team_slot: number | null;
-  question_pos: number | null; awarded: boolean;
+  question_pos: number | null; go_at: string | null;
 }
 export interface PlayerRow { id: string; room_id: string; name: string; team_slot: number | null; is_admin: boolean }
 
@@ -114,7 +122,7 @@ export async function authenticate(req: Request, room: RoomRow): Promise<PlayerR
   const fail = new ApiError("unauthorized", 401);
   if (!UUID.test(id) || !token) throw fail;
 
-  const { data: player } = await db().from("players").select("*").eq("id", id).eq("room_id", room.id).maybeSingle();
+  const { data: player } = await db().from("players").select("id,room_id,name,team_slot,is_admin").eq("id", id).eq("room_id", room.id).maybeSingle();
   const { data: secret } = await db().from("player_secrets").select("token_hash").eq("player_id", id).maybeSingle();
   if (!player || !secret) throw fail;
 
@@ -132,13 +140,17 @@ export async function tryAuthenticate(req: Request, room: RoomRow): Promise<Play
 
 export async function buildState(code: string, meId: string | null): Promise<RoomState> {
   const room = await getRoom(code);
-  const [p, t] = await Promise.all([
-    db().from("players").select("*").eq("room_id", room.id).order("joined_at"),
+  const [p, t, n] = await Promise.all([
+    db().from("players").select("id,name,team_slot,is_admin,has_avatar").eq("room_id", room.id).order("joined_at"),
     db().from("teams").select("*").eq("room_id", room.id).order("slot"),
+    db().rpc("db_now"),
   ]);
   if (p.error) throw p.error;
   if (t.error) throw t.error;
-  const players = (p.data as PlayerRow[]).map((x) => ({ id: x.id, name: x.name, teamSlot: x.team_slot, isAdmin: x.is_admin }));
+  if (n.error) throw n.error;
+  const players = (p.data as (Omit<PlayerRow, "room_id"> & { has_avatar: boolean })[]).map((x) => ({
+    id: x.id, name: x.name, teamSlot: x.team_slot, isAdmin: x.is_admin, hasAvatar: x.has_avatar,
+  }));
   const me = meId ? players.find((x) => x.id === meId) : undefined;
 
   // Вопрос виден всем только во время раунда; ответы и полный список — только администратору.
@@ -163,10 +175,11 @@ export async function buildState(code: string, meId: string | null): Promise<Roo
     roundNumber: room.round_number,
     winner: room.winner_name !== null && room.winner_team_slot !== null
       ? { playerId: room.winner_player_id, name: room.winner_name, teamSlot: room.winner_team_slot } : null,
-    teams: (t.data as { slot: number; color: string; name: string | null; score: number }[]).map((x) => ({ slot: x.slot, color: x.color, name: x.name, score: x.score })),
+    teams: (t.data as { slot: number; color: string; name: string | null }[]).map((x) => ({ slot: x.slot, color: x.color, name: x.name })),
     players,
     me: me ? { id: me.id, isAdmin: me.isAdmin, teamSlot: me.teamSlot } : null,
-    awarded: room.awarded,
+    goAt: room.go_at,
+    serverNow: String(n.data),
     question,
     questions,
   };

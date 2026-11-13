@@ -32,9 +32,9 @@ async function call<T>(path: string, method: string, body?: unknown, s?: Session
 }
 
 export const api = {
-  create: (name: string) => call<{ code: string; playerId: string; token: string }>("/api/rooms", "POST", { name }),
-  join: (code: string, name: string) => call<{ playerId: string; token: string }>(`/api/rooms/${code}`, "POST", { action: "join", name }),
+  create: (name: string, avatar: string | null) => call<{ code: string; playerId: string; token: string }>("/api/rooms", "POST", { name, avatar }),
+  join: (code: string, name: string, avatar: string | null) => call<{ playerId: string; token: string }>(`/api/rooms/${code}`, "POST", { action: "join", name, avatar }),
   state: (code: string, s: Session | null) => call<RoomState>(`/api/rooms/${code}`, "GET", undefined, s),
   act: (code: string, s: Session, body: Record<string, unknown>) =>
-    call<{ won?: boolean; state: RoomState }>(`/api/rooms/${code}`, "POST", body, s),
+    call<{ result?: string; state: RoomState }>(`/api/rooms/${code}`, "POST", body, s),
 };
